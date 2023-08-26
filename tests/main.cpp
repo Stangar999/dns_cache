@@ -9,11 +9,17 @@
 
 class TestPrepare : public ::testing::Test {
  protected:
+  static void SetUpTestSuite() {
+    DNSCache::InitDNSCache(3);
+  }
+  static void TearDownTestSuite() {
+  }
   void SetUp() {
   }
   void TearDown() {
   }
-  DNSCache& d_c = DNSCache::GetDNSCache(3);
+
+  DNSCache& d_c = DNSCache::GetDNSCache();
   std::mt19937 generator;
   std::uniform_int_distribution<char> uniform_dist_char{'A', 'Z'};
   std::uniform_int_distribution<unsigned> uniform_dist_u{0, 255};
@@ -78,7 +84,7 @@ TEST_F(TestPrepare, DeleteLastIP) {
 }
 
 TEST(CrossUpdate, ALL) {
-  DNSCache& d_c = DNSCache::GetDNSCache(3);
+  DNSCache& d_c = DNSCache::GetDNSCache();
   d_c.update("dns1", "ip1");
   d_c.update("dns2", "ip2");
   d_c.update("dns3", "ip3");
@@ -90,17 +96,17 @@ TEST(CrossUpdate, ALL) {
 
   d_c.update("dns2", "ip1");
   ASSERT_EQ(d_c.resolve("dns2"), "ip1");
-  ASSERT_EQ(d_c.resolve("dns1"), "ip1");
+  ASSERT_EQ(d_c.resolve("dns1"), "");
   ASSERT_EQ(d_c.resolve("dns3"), "ip3");
 
   d_c.update("dns2", "ip4");
   ASSERT_EQ(d_c.resolve("dns2"), "ip4");
-  ASSERT_EQ(d_c.resolve("dns1"), "ip1");
+  ASSERT_EQ(d_c.resolve("dns1"), "");
   ASSERT_EQ(d_c.resolve("dns3"), "ip3");
 }
 
 TEST(UpdateHistoryOnUpdate, ALL) {
-  DNSCache& d_c = DNSCache::GetDNSCache(3);
+  DNSCache& d_c = DNSCache::GetDNSCache();
   d_c.update("dns1", "ip1");
   d_c.update("dns2", "ip2");
   d_c.update("dns3", "ip3");
@@ -114,7 +120,7 @@ TEST(UpdateHistoryOnUpdate, ALL) {
 }
 
 TEST(UpdateHistoryOnResolve, ALL) {
-  DNSCache& d_c = DNSCache::GetDNSCache(3);
+  DNSCache& d_c = DNSCache::GetDNSCache();
   d_c.update("dns1", "ip1");
   d_c.update("dns2", "ip2");
   d_c.update("dns3", "ip3");

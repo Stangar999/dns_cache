@@ -1,44 +1,46 @@
 ﻿#include "dns_cache.h"
 
+#include <iostream>
+
 DNSCache::DNSCache(size_t max_size) : _max_size(max_size) {
 }
 
 void DNSCache::update(const std::string& name, const std::string& ip) {
-  std::unique_lock l(m);
-  if (auto dns_ip_it = _dns_ip_holder.find(name); dns_ip_it != _dns_ip_holder.end()) {  // обновить элемент
-    auto& [_, ip_it] = *dns_ip_it;
-    ip_it.ip = ip;              // обновить ip
-    update_history(dns_ip_it);  // поднять в истории
-  } else {
-    check_size_and_insert(name, ip);
-  }
+  std::unique_lock l(_m);
+
+  // если обновления по данным есть
+  auto it_dns = _dns_ip_hold.by<DNS>().find(name);
+  check_exist_and_delete_old_data<decltype(it_dns), DNS>(it_dns);
+
+  auto it_ip_it = _dns_ip_hold.by<IpIt>().find(IpIt{.ip = ip});
+  check_exist_and_delete_old_data<decltype(it_ip_it), IpIt>(it_ip_it);
+
+  check_size_and_insert(name, ip);
 }
 
 std::string DNSCache::resolve(const std::string& name) {
-  std::unique_lock l(m);
-  if (auto dns_ip_it = _dns_ip_holder.find(name); dns_ip_it != _dns_ip_holder.end()) {
-    update_history(dns_ip_it);
-    return dns_ip_it->second.ip;
+  std::unique_lock l(_m);
+  if (auto it = _dns_ip_hold.by<DNS>().find(name); it != _dns_ip_hold.by<DNS>().end()) {
+    const auto& [dns, ip_it] = *it;
+    update_history(ip_it);
+    return ip_it.ip;
   }
   return {};
 }
 
 void DNSCache::check_size_and_insert(const std::string& name, const std::string& ip) {
-  if (_dns_ip_holder.size() >= _max_size) {
-    _dns_ip_holder.erase(*_history.back());  // тут string_view приходиться выделять в std::string поэтому string*
+  if (_dns_ip_hold.size() >= _max_size) {
+    _dns_ip_hold.by<DNS>().erase(std::string(_history.back()));
     _history.pop_back();
   }
-
-  auto [dns_ip_it, flag] = _dns_ip_holder.emplace(name, IpIt{.ip = ip});
-  auto& [key_dns_name, ip_it] = *dns_ip_it;
-  _history.push_front(&key_dns_name);  // добавляем в лист имя домена, что бы при превышении max_size по нему удалить ip
-  ip_it.it_on_history = _history.begin();  // добавляем в ip_holder информацию о том в каком узле лежит имя домена что
-                                           // бы при обновлении его за константу найти его и положить в начало списка
+  // сохраняем имя, что бы при превышении max_size по нему из хранилища удалить самую старую
+  _history.push_front(name);
+  _dns_ip_hold.insert({name, IpIt{.ip = ip, .it_on_history = _history.begin()}});
 }
 
-void DNSCache::update_history(Um_it& dns_ip_it) {
-  auto& [key_dns, ip_it] = *dns_ip_it;
-  _history.erase(ip_it.it_on_history);  // удаляем имя домена из листа что бы записать его в начало
-  _history.push_front(&key_dns);  // записываем в начало имя домена
-  ip_it.it_on_history = _history.begin();  // обновляем итератор на перемещенный в начало элемент
+void DNSCache::update_history(const IpIt& ip_it) {
+  std::string dns = *ip_it.it_on_history;
+  _history.erase(ip_it.it_on_history);
+  _history.push_front(std::move(dns));
+  ip_it.it_on_history = _history.begin();
 }
