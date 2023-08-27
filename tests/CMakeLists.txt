@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.5)
 
-project(MonoTests LANGUAGES CXX)
+project(Tests LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,4 +33,9 @@ target_link_libraries("${PROJECT_NAME}"
   ${GTEST_BOTH_LIBRARIES}
   Threads::Threads)
 
-add_test("${PROJECT_NAME}" test)
+add_test("${PROJECT_NAME}" test_1)
+
+add_custom_target("run_${PROJECT_NAME}"
+  $<TARGET_FILE:${PROJECT_NAME}>
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)

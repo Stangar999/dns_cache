@@ -1,0 +1,41 @@
+﻿name: 'CI'
+
+on:
+  push:
+    branches:
+      - master
+      
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: docker build -t im_my_app .
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+          image: im_my_app
+          options: --rm -v ${{ github.workspace }}:/usr/src/
+          run: |
+              cd /usr/src/
+              cmake -B build 
+              cmake --build build --target DNSCache
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: docker build -t im_my_app .
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+          image: im_my_app
+          options: --rm -v ${{ github.workspace }}:/usr/src/
+          run: |
+              cd /usr/src/
+              cmake -B build 
+              cmake --build build --target run_Tests
+
+
