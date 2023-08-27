@@ -2,7 +2,7 @@
 
 project(DNSCache LANGUAGES CXX)
 
-find_package(Boost 1.81.0 REQUIRED)
+find_package(Boost 1.74.0 REQUIRED)
 find_package(Threads REQUIRED)
 
 add_executable("${PROJECT_NAME}" main.cpp
