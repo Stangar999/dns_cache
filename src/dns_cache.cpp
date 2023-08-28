@@ -29,13 +29,15 @@ std::string DNSCache::resolve(const std::string& name) {
 }
 
 void DNSCache::check_size_and_insert(const std::string& name, const std::string& ip) {
-  if (_dns_ip_hold.size() >= _max_size) {
+  if (_dns_ip_hold.size() >= _max_size && !_dns_ip_hold.empty()) {
     _dns_ip_hold.by<DNS>().erase(std::string(_history.back()));
     _history.pop_back();
   }
-  // сохраняем имя, что бы при превышении max_size по нему из хранилища удалить самую старую
-  _history.push_front(name);
-  _dns_ip_hold.insert({name, IpIt{.ip = ip, .it_on_history = _history.begin()}});
+  if (_dns_ip_hold.size() < _max_size) {
+    // сохраняем имя, что бы при превышении max_size по нему из хранилища удалить самую старую
+    _history.push_front(name);
+    _dns_ip_hold.insert({name, IpIt{.ip = ip, .it_on_history = _history.begin()}});
+  }
 }
 
 void DNSCache::update_history(const IpIt& ip_it) {
